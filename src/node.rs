@@ -5,11 +5,19 @@ pub struct Node<'a> {
 
     // The node_id field indicates the ID of the node which is receiving this message: here, the node ID is "n3". Your node should remember this ID and include it as the src of any message it sends.
     id: Option<String>,
+
+    seq: usize,
+    step: usize,
 }
 
 impl<'a> Node<'a> {
     pub fn new(writer: &'a mut dyn std::io::Write) -> Self {
-        Node { writer, id: None }
+        Node {
+            writer,
+            id: None,
+            seq: 0,
+            step: 0,
+        }
     }
 
     pub fn step(&mut self, message: Message) -> anyhow::Result<()> {
@@ -19,6 +27,11 @@ impl<'a> Node<'a> {
                 node_id,
                 node_ids,
             } => {
+                let num = node_id.as_str();
+                self.seq = (&num[1..]).parse::<usize>()?;
+
+                self.id = Some(node_id);
+                self.step = node_ids.len();
                 let init_ok = Message {
                     src: message.dst,
                     dst: message.src,
@@ -46,6 +59,22 @@ impl<'a> Node<'a> {
                 self.print(echo_ok)?;
             }
             Type::EchoOk { .. } => {}
+            Type::Generate { msg_id } => {
+                self.seq += self.step;
+                let generate_ok = Message {
+                    src: message.dst,
+                    dst: message.src,
+                    body: Body {
+                        ty: Type::GenerateOk {
+                            msg_id,
+                            in_reply_to: msg_id,
+                            id: self.seq,
+                        },
+                    },
+                };
+                self.print(generate_ok)?;
+            }
+            Type::GenerateOk { .. } => todo!(),
         }
         Ok(())
     }

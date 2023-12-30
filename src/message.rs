@@ -36,6 +36,14 @@ pub enum Type {
         in_reply_to: usize,
         echo: String,
     },
+    Generate {
+        msg_id: usize,
+    },
+    GenerateOk {
+        msg_id: usize,
+        in_reply_to: usize,
+        id: usize,
+    },
 }
 
 #[cfg(test)]
