@@ -6,8 +6,12 @@ pub struct Node<'a> {
     // The node_id field indicates the ID of the node which is receiving this message: here, the node ID is "n3". Your node should remember this ID and include it as the src of any message it sends.
     id: Option<String>,
 
+    // unique-ids
     seq: usize,
     step: usize,
+
+    // broadcast
+    messages: Vec<usize>,
 }
 
 impl<'a> Node<'a> {
@@ -17,6 +21,7 @@ impl<'a> Node<'a> {
             id: None,
             seq: 0,
             step: 0,
+            messages: vec![],
         }
     }
 
@@ -75,6 +80,52 @@ impl<'a> Node<'a> {
                 self.print(generate_ok)?;
             }
             Type::GenerateOk { .. } => todo!(),
+
+            Type::Broadcast { msg_id, msg } => {
+                self.messages.push(msg);
+                let broadcast_ok = Message {
+                    src: message.dst,
+                    dst: message.src,
+                    body: Body {
+                        ty: Type::BroadcastOk {
+                            msg_id,
+                            in_reply_to: msg_id,
+                        },
+                    },
+                };
+                self.print(broadcast_ok)?;
+            }
+            Type::BroadcastOk { .. } => {}
+
+            Type::Read { msg_id } => {
+                let read_ok = Message {
+                    src: message.dst,
+                    dst: message.src,
+                    body: Body {
+                        ty: Type::ReadOk {
+                            msg_id,
+                            in_reply_to: msg_id,
+                            messages: self.messages.clone(),
+                        },
+                    },
+                };
+                self.print(read_ok)?;
+            }
+            Type::ReadOk { .. } => {}
+            Type::Topology { msg_id, topology } => {
+                let topology_ok = Message {
+                    src: message.dst,
+                    dst: message.src,
+                    body: Body {
+                        ty: Type::TopologyOk {
+                            msg_id,
+                            in_reply_to: msg_id,
+                        },
+                    },
+                };
+                self.print(topology_ok)?;
+            }
+            Type::TopologyOk { .. } => {}
         }
         Ok(())
     }

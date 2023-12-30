@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,6 +45,32 @@ pub enum Type {
         msg_id: usize,
         in_reply_to: usize,
         id: usize,
+    },
+    Broadcast {
+        msg_id: usize,
+
+        #[serde(rename = "message")]
+        msg: usize,
+    },
+    BroadcastOk {
+        msg_id: usize,
+        in_reply_to: usize,
+    },
+    Read {
+        msg_id: usize,
+    },
+    ReadOk {
+        msg_id: usize,
+        in_reply_to: usize,
+        messages: Vec<usize>,
+    },
+    Topology {
+        msg_id: usize,
+        topology: HashMap<String, serde_json::Value>,
+    },
+    TopologyOk {
+        msg_id: usize,
+        in_reply_to: usize,
     },
 }
 
