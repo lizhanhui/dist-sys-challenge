@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::message::{Body, Message, Type};
 
 pub struct Node<'a> {
@@ -11,7 +13,10 @@ pub struct Node<'a> {
     step: usize,
 
     // broadcast
-    messages: Vec<usize>,
+    messages: HashSet<usize>,
+
+    // broadcast-3b
+    neighbors: HashSet<String>,
 }
 
 impl<'a> Node<'a> {
@@ -21,7 +26,8 @@ impl<'a> Node<'a> {
             id: None,
             seq: 0,
             step: 0,
-            messages: vec![],
+            messages: HashSet::new(),
+            neighbors: HashSet::new(),
         }
     }
 
@@ -82,7 +88,13 @@ impl<'a> Node<'a> {
             Type::GenerateOk { .. } => todo!(),
 
             Type::Broadcast { msg_id, msg } => {
-                self.messages.push(msg);
+                let new = if !self.messages.contains(&msg) {
+                    self.messages.insert(msg);
+                    true
+                } else {
+                    false
+                };
+
                 let broadcast_ok = Message {
                     src: message.dst,
                     dst: message.src,
@@ -94,6 +106,24 @@ impl<'a> Node<'a> {
                     },
                 };
                 self.print(broadcast_ok)?;
+
+                // If this message is new, need to propagate it to its peers.
+                if new {
+                    let replica = self
+                        .neighbors
+                        .iter()
+                        .map(|neighbour| Message {
+                            src: self.id.clone().unwrap(),
+                            dst: neighbour.clone(),
+                            body: Body {
+                                ty: Type::Broadcast { msg_id, msg },
+                            },
+                        })
+                        .collect::<Vec<_>>();
+                    for message in replica {
+                        self.print(message)?;
+                    }
+                }
             }
             Type::BroadcastOk { .. } => {}
 
@@ -105,7 +135,7 @@ impl<'a> Node<'a> {
                         ty: Type::ReadOk {
                             msg_id,
                             in_reply_to: msg_id,
-                            messages: self.messages.clone(),
+                            messages: self.messages.iter().map(|x| *x).collect::<Vec<_>>(),
                         },
                     },
                 };
@@ -113,6 +143,13 @@ impl<'a> Node<'a> {
             }
             Type::ReadOk { .. } => {}
             Type::Topology { msg_id, topology } => {
+                if let Some(ref node_id) = self.id {
+                    if let Some(neighbors) = topology.get(node_id) {
+                        neighbors.iter().for_each(|n| {
+                            self.neighbors.insert(n.clone());
+                        });
+                    }
+                }
                 let topology_ok = Message {
                     src: message.dst,
                     dst: message.src,

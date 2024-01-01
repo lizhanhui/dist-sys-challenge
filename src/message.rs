@@ -66,7 +66,7 @@ pub enum Type {
     },
     Topology {
         msg_id: usize,
-        topology: HashMap<String, serde_json::Value>,
+        topology: HashMap<String, Vec<String>>,
     },
     TopologyOk {
         msg_id: usize,
