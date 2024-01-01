@@ -95,23 +95,12 @@ impl<'a> Node<'a> {
                     false
                 };
 
-                let broadcast_ok = Message {
-                    src: message.dst,
-                    dst: message.src,
-                    body: Body {
-                        ty: Type::BroadcastOk {
-                            msg_id,
-                            in_reply_to: msg_id,
-                        },
-                    },
-                };
-                self.print(broadcast_ok)?;
-
                 // If this message is new, need to propagate it to its peers.
                 if new {
                     let replica = self
                         .neighbors
                         .iter()
+                        .filter(|&n| *n != message.src)
                         .map(|neighbour| Message {
                             src: self.id.clone().unwrap(),
                             dst: neighbour.clone(),
@@ -124,8 +113,20 @@ impl<'a> Node<'a> {
                         self.print(message)?;
                     }
                 }
+
+                let broadcast_ok = Message {
+                    src: message.dst,
+                    dst: message.src.clone(),
+                    body: Body {
+                        ty: Type::BroadcastOk {
+                            msg_id,
+                            in_reply_to: msg_id,
+                        },
+                    },
+                };
+                self.print(broadcast_ok)?;
             }
-            Type::BroadcastOk { .. } => {}
+            Type::BroadcastOk { msg_id, in_reply_to } => {}
 
             Type::Read { msg_id } => {
                 let read_ok = Message {
