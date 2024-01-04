@@ -1,7 +1,5 @@
 use std::io::Write;
 
-use serde::Serialize;
-
 use super::Node;
 use crate::message::{EchoPayload, Init, Message};
 
@@ -35,5 +33,9 @@ impl Node<EchoPayload> for EchoNode {
         }
         echo_reply.write_and_flush(&mut *write)?;
         Ok(())
+    }
+
+    fn id(&mut self) -> &mut usize {
+        &mut self.id
     }
 }
