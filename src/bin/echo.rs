@@ -32,11 +32,7 @@ fn main() -> anyhow::Result<()> {
                 &line.context("Failed to read echo message from STDIN")?,
             )
             .context("Failed to parse echo message")?;
-            let mut echo_reply = echo_message.into_reply(Some(&mut node.id));
-            if let EchoPayload::Echo(echo) = echo_reply.body.payload {
-                echo_reply.body.payload = EchoPayload::EchoOk(echo);
-            }
-            echo_reply.write_and_flush(&mut stdout)?;
+            node.process(echo_message, &mut stdout)?;
         }
 
         Ok(())
