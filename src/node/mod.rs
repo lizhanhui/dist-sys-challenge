@@ -5,7 +5,9 @@ use serde::de::DeserializeOwned;
 
 use crate::message::{Init, InitPayload, Message};
 
+pub mod broadcast;
 pub mod echo;
+pub mod unique_ids;
 
 pub trait Node<Payload> {
     fn from_init(init: &Init) -> anyhow::Result<Self>
