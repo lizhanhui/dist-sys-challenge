@@ -66,6 +66,9 @@ impl BroadcastNode {
                 })
                 .map(|v| *v)
                 .collect::<Vec<_>>();
+            if messages.is_empty() {
+                continue;
+            }
             let mid = self.id;
             self.id += 1;
             let gossip = Message::<BroadcastPayload> {
@@ -116,15 +119,31 @@ impl Node<BroadcastPayload> for BroadcastNode {
                     new = true;
                 }
 
+                // Update known table
+                if reply.dst.starts_with('n') {
+                    self.known
+                        .entry(reply.dst.clone())
+                        .or_default()
+                        .insert(message);
+                }
+
                 if new {
                     for peer in &self.neighbors {
                         // Skip the original node
                         if reply.dst == *peer {
                             continue;
                         }
+
+                        // Skip forward message if it already knows
+                        if let Some(s) = self.known.get(peer) {
+                            if s.contains(&message) {
+                                continue;
+                            }
+                        }
+
                         let mid = self.id;
                         self.id += 1;
-                        let gossip = Message::<BroadcastPayload> {
+                        let forward = Message::<BroadcastPayload> {
                             src: self.node_id.clone(),
                             dst: peer.clone(),
                             body: Body::<BroadcastPayload> {
@@ -134,7 +153,7 @@ impl Node<BroadcastPayload> for BroadcastNode {
                             },
                         };
                         // broadcast new message to its neighbours.
-                        gossip.write_and_flush(&mut *write)?;
+                        forward.write_and_flush(&mut *write)?;
                     }
                 }
 
@@ -162,6 +181,7 @@ impl Node<BroadcastPayload> for BroadcastNode {
                         .or_default()
                         .insert(*message);
                 });
+                reply.body.payload = BroadcastPayload::GossipOk;
             }
 
             BroadcastPayload::BroadcastOk
@@ -169,6 +189,7 @@ impl Node<BroadcastPayload> for BroadcastNode {
             | BroadcastPayload::TopologyOk
             | BroadcastPayload::GossipOk => {
                 // No need to process
+                return Ok(());
             }
         }
         reply.write_and_flush(write)?;
