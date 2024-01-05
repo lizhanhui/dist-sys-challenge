@@ -25,3 +25,9 @@ https://fly.io/dist-sys/
 ```sh
 ~/Downloads/maelstrom/maelstrom test -w broadcast --bin target/debug/broadcast --node-count 5 --time-limit 20 --rate 10
 ```
+
+## Fault Tolerant Broadcast
+
+```sh
+~/Downloads/maelstrom/maelstrom test -w broadcast --bin target/debug/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+```

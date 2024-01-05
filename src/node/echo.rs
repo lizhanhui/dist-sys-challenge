@@ -38,4 +38,8 @@ impl Node<EchoPayload> for EchoNode {
     fn id(&mut self) -> &mut usize {
         &mut self.id
     }
+
+    fn on_timeout(&mut self, _write: &mut impl Write) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
