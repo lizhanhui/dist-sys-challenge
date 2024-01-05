@@ -113,10 +113,8 @@ impl Node<BroadcastPayload> for BroadcastNode {
 
         match reply.body.payload {
             BroadcastPayload::Broadcast { message } => {
-                let mut new = false;
                 if self.vals.iter().find(|&v| *v == message).is_none() {
                     self.vals.push(message);
-                    new = true;
                 }
 
                 // Update known table
@@ -126,37 +124,6 @@ impl Node<BroadcastPayload> for BroadcastNode {
                         .or_default()
                         .insert(message);
                 }
-
-                if new {
-                    for peer in &self.neighbors {
-                        // Skip the original node
-                        if reply.dst == *peer {
-                            continue;
-                        }
-
-                        // Skip forward message if it already knows
-                        if let Some(s) = self.known.get(peer) {
-                            if s.contains(&message) {
-                                continue;
-                            }
-                        }
-
-                        let mid = self.id;
-                        self.id += 1;
-                        let forward = Message::<BroadcastPayload> {
-                            src: self.node_id.clone(),
-                            dst: peer.clone(),
-                            body: Body::<BroadcastPayload> {
-                                id: Some(mid),
-                                in_reply_to: None,
-                                payload: BroadcastPayload::Broadcast { message: message },
-                            },
-                        };
-                        // broadcast new message to its neighbours.
-                        forward.write_and_flush(&mut *write)?;
-                    }
-                }
-
                 reply.body.payload = BroadcastPayload::BroadcastOk;
             }
             BroadcastPayload::Read => {
@@ -194,7 +161,7 @@ impl Node<BroadcastPayload> for BroadcastNode {
         }
         reply.write_and_flush(write)?;
 
-        if self.last_gossip.elapsed() > Duration::from_secs(1) {
+        if self.last_gossip.elapsed() > Duration::from_secs(2) {
             self.last_gossip = Instant::now();
             return self.apply_gossip(write);
         }
