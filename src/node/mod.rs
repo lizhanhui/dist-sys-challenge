@@ -1,6 +1,7 @@
 use std::{
     io::{BufRead, Write},
     sync::mpsc::RecvTimeoutError,
+    time::Duration,
 };
 
 use anyhow::Context;
@@ -74,7 +75,7 @@ where
         });
 
         loop {
-            match rx.recv_timeout(std::time::Duration::from_millis(100)) {
+            match rx.recv_timeout(Duration::from_millis(1000)) {
                 Ok(Event::Message::<P>(m)) => {
                     node.process(m, &mut stdout)?;
                 }
